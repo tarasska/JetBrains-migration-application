@@ -10,10 +10,9 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.json.JSONArray;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -53,6 +52,10 @@ public abstract class AbstractStorageService {
         }
     }
 
+    private void executePostRequest(final String uri) throws ServiceException {
+
+    }
+
     private void executeDeleteRequest(final String uri) throws ServiceException {
         HttpDelete request = new HttpDelete(uri);
         request.setHeader("Accept", "*/*");
@@ -70,7 +73,7 @@ public abstract class AbstractStorageService {
 
     abstract String getDefaultURI();
 
-    public List<String> getFiles() throws ServiceException {
+    public List<String> getFilesList() throws ServiceException {
         try (BufferedReader bufferedReader =
                      new BufferedReader(new InputStreamReader(executeGetRequest(getDefaultURI())))) {
             StringBuilder jsonString = new StringBuilder();
@@ -93,8 +96,25 @@ public abstract class AbstractStorageService {
         }
     }
 
-    public void upload(final String fileName) throws ServiceException {
+    public void upload(final File file, final String fileName) throws ServiceException {
 
+    }
+
+    public void download(final Path tempDir, final String fileName) throws ServiceException {
+        Path file = tempDir.resolve(fileName);
+        try (InputStream inputStream = executeGetRequest(getFileURI(fileName))) {
+            BufferedWriter writer = Files.newBufferedWriter(file);
+            int data;
+            while ((data = inputStream.read()) != -1) {
+                writer.write(data);
+            }
+        } catch (IOException e) {
+            try {
+                Files.deleteIfExists(file);
+            } catch (IOException ignored) {
+            }
+            throw new ServiceException("IOException occurred during reading request content", e);
+        }
     }
 
     public void delete(final String fileName) throws ServiceException {
