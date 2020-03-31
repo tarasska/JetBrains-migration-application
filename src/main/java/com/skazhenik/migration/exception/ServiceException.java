@@ -1,7 +1,8 @@
 package com.skazhenik.migration.exception;
 
 public class ServiceException extends Exception {
-    public ServiceException() {}
+    public ServiceException() {
+    }
 
     public ServiceException(final String message) {
         super(message);

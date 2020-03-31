@@ -3,9 +3,11 @@ package com.skazhenik.migration.service;
 import com.skazhenik.migration.exception.ServiceException;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.mime.MultipartEntityBuilder;
+import org.apache.http.entity.mime.content.FileBody;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.json.JSONArray;
@@ -52,8 +54,19 @@ public abstract class AbstractStorageService {
         }
     }
 
-    private void executePostRequest(final String uri) throws ServiceException {
+    private void executePostRequest(final String uri, final File file) throws ServiceException {
+        HttpPost request = new HttpPost(uri);
+        request.setHeader("Accept", "*/*");
+        request.setEntity(MultipartEntityBuilder.create().addPart("file", new FileBody(file)).build());
 
+        HttpResponse response;
+        try {
+            response = client.execute(request);
+        } catch (IOException e) {
+            throw new ServiceException("IOException occurred during the execution of the POST request", e);
+        }
+
+        checkResponse(response);
     }
 
     private void executeDeleteRequest(final String uri) throws ServiceException {
@@ -97,7 +110,7 @@ public abstract class AbstractStorageService {
     }
 
     public void upload(final File file, final String fileName) throws ServiceException {
-
+        executePostRequest(getFileURI(fileName), file);
     }
 
     public void download(final Path tempDir, final String fileName) throws ServiceException {
