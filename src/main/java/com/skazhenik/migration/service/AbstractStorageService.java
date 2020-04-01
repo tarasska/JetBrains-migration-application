@@ -3,6 +3,7 @@ package com.skazhenik.migration.service;
 import com.skazhenik.migration.exception.ServiceException;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
@@ -28,27 +29,28 @@ public abstract class AbstractStorageService {
     }
 
 
-    private boolean isResponseSuccessful(int responseCode) {
+    private boolean isResponseSuccessful(final HttpResponse response) {
         // setting point
-        return 200 == responseCode;
+        return response.getStatusLine().getStatusCode() == 200;
     }
 
     private void checkResponse(final HttpResponse response) throws ServiceException {
-        final int responseCode = response.getStatusLine().getStatusCode();
-        if (!isResponseSuccessful(responseCode)) {
-            throw new ServiceException("Bad response with code: " + responseCode);
+        if (!isResponseSuccessful(response)) {
+            throw new ServiceException("Bad response with code: " + response.getStatusLine().getStatusCode());
         }
     }
 
     private InputStream executeGetRequest(final String uri) throws ServiceException {
         HttpGet request = new HttpGet(uri);
         try {
-            HttpResponse response = client.execute(request);
+            CloseableHttpResponse response = client.execute(request);
             HttpEntity entity = response.getEntity();
-
-            checkResponse(response);
-
-            return entity.getContent();
+            if (isResponseSuccessful(response)) {
+                return entity.getContent();
+            } else {
+                entity.getContent().close();
+                throw new ServiceException("Bad response with code: " + response.getStatusLine().getStatusCode());
+            }
         } catch (IOException e) {
             throw new ServiceException("IOException occurred during the execution of the GET request", e);
         }
@@ -58,22 +60,17 @@ public abstract class AbstractStorageService {
         HttpPost request = new HttpPost(uri);
         request.setHeader("Accept", "*/*");
         request.setEntity(MultipartEntityBuilder.create().addPart("file", new FileBody(file)).build());
-
-        HttpResponse response;
-        try {
-            response = client.execute(request);
+        try (CloseableHttpResponse response = client.execute(request)) {
+            checkResponse(response);
         } catch (IOException e) {
             throw new ServiceException("IOException occurred during the execution of the POST request", e);
         }
-
-        checkResponse(response);
     }
 
     private void executeDeleteRequest(final String uri) throws ServiceException {
         HttpDelete request = new HttpDelete(uri);
         request.setHeader("Accept", "*/*");
-        try {
-            HttpResponse response = client.execute(request);
+        try (CloseableHttpResponse response = client.execute(request)) {
             checkResponse(response);
         } catch (IOException e) {
             throw new ServiceException("IOException occurred during the execution of the DELETE request", e);
@@ -116,18 +113,20 @@ public abstract class AbstractStorageService {
     public void download(final Path tempDir, final String fileName) throws ServiceException {
         Path file = tempDir.resolve(fileName);
         try (InputStream inputStream = executeGetRequest(getFileURI(fileName))) {
-            BufferedWriter writer = Files.newBufferedWriter(file);
-            int data;
-            while ((data = inputStream.read()) != -1) {
-                writer.write(data);
+            try (BufferedWriter writer = Files.newBufferedWriter(file)) {
+                int data;
+                while ((data = inputStream.read()) != -1) {
+                    writer.write(data);
+                }
             }
         } catch (IOException e) {
             try {
                 Files.deleteIfExists(file);
             } catch (IOException ignored) {
             }
-            throw new ServiceException("IOException occurred during reading request content", e);
+            throw new ServiceException("IOException occurred during processing request content", e);
         }
+
     }
 
     public void delete(final String fileName) throws ServiceException {

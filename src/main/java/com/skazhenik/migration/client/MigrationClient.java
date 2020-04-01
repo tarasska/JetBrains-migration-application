@@ -4,29 +4,31 @@ import com.skazhenik.migration.exception.MigrationException;
 import com.skazhenik.migration.loader.ParallelLoader;
 import com.skazhenik.migration.service.NewStorageService;
 import com.skazhenik.migration.service.OldStorageService;
-import com.skazhenik.migration.util.HttpFileLoader;
 
 import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 import static com.skazhenik.migration.util.FileManager.createTempDir;
 import static com.skazhenik.migration.util.FileManager.deleteTempDir;
-import static com.skazhenik.migration.util.MigrationManager.getFilesList;
+import static com.skazhenik.migration.util.MigrationManager.*;
 
 public class MigrationClient {
     private static final Path temporaryDirLocation = Path.of("..");
+    private static final int MAX_LOCAL_FILE_COUNT = 100;
     private final OldStorageService oldStorageService = new OldStorageService();
     private final NewStorageService newStorageService = new NewStorageService();
 
     private void migrate(final Path tempDir) throws MigrationException {
         List<String> oldFiles = getFilesList(oldStorageService);
-        ParallelLoader parallelLoader = new ParallelLoader(5, 5,
-                tempDir, oldStorageService, newStorageService);
-        parallelLoader.load(oldFiles);
-        List<String> newFiles = getFilesList(newStorageService);
+        try (ParallelLoader parallelLoader = new ParallelLoader(MAX_LOCAL_FILE_COUNT,
+                tempDir, oldStorageService, newStorageService);) {
+            parallelLoader.load(oldFiles);
+        } catch (ExecutionException e) {
+            throw new MigrationException("Loading files failed", e);
+        }
+        System.err.println("migrate");
     }
 
     private void run() {
@@ -34,16 +36,19 @@ public class MigrationClient {
         try {
             tempDir = createTempDir(temporaryDirLocation);
         } catch (IOException e) {
-            System.err.println("Migration failed with msg: " + e.getMessage());
+            System.err.println("Unable to create temporary directory " + e.getMessage());
             return;
         }
         try {
             migrate(tempDir);
-            deleteTempDir(tempDir);
         } catch (MigrationException e) {
             System.err.println("Migration failed with msg: " + e.getMessage());
-        } catch (IOException ignored) {
-            System.err.println("Unable to delete temp dir");
+        } finally {
+            try {
+                deleteTempDir(tempDir);
+            } catch (IOException e) {
+                System.err.println("Unable to delete temporary directory: " + tempDir);
+            }
         }
     }
 

@@ -55,4 +55,19 @@ public class MigrationManager {
         }
         throw new MigrationException("Waiting too long for the correct response to the file upload request");
     }
+
+    public static void deleteFile(final AbstractStorageService service,
+                                  final String fileName) throws MigrationException {
+        int remainingAttempts = UnsuccessfulRequestCount;
+        while (remainingAttempts > 0) {
+            try {
+                service.delete(fileName);
+                return;
+            } catch (ServiceException e) {
+                System.err.println("Log `delete` (file: " + fileName + ") failed: " + e.getMessage());
+                remainingAttempts--;
+            }
+        }
+        throw new MigrationException("Waiting too long for the correct response to the file upload request");
+    }
 }
