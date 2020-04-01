@@ -10,6 +10,6 @@ public class NewStorageService extends AbstractStorageService {
 
     @Override
     public String getDefaultURI(){
-        return localhost + endPoint;
+        return defaultURI;
     }
 }
