@@ -31,6 +31,7 @@ public class MigrationManager {
         while (remainingAttempts > 0) {
             try {
                 service.download(tempDir, fileName);
+                return;
             } catch (ServiceException e) {
                 System.err.println("Log `download` (file: " + fileName + ") failed: " + e.getMessage());
                 remainingAttempts--;
@@ -45,7 +46,8 @@ public class MigrationManager {
         int remainingAttempts = UnsuccessfulRequestCount;
         while (remainingAttempts > 0) {
             try {
-                service.upload(file, fileName);
+                service.upload(file);
+                return;
             } catch (ServiceException e) {
                 System.err.println("Log `upload` (file: " + fileName + ") failed: " + e.getMessage());
                 remainingAttempts--;

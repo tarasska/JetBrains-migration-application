@@ -59,8 +59,9 @@ public class HttpFileLoader implements AutoCloseable {
         request.setHeader("Accept", "*/*");
         MultipartEntityBuilder builder = MultipartEntityBuilder.create();
         // fileParamName should be replaced with parameter name your REST API expect.
-        builder.addPart("file", new FileBody(new File(filePath)));
-        builder.addPart("optionalParam", new StringBody("true", ContentType.create("text/plain", Consts.UTF_8)));
+//        builder.addPart("file", new FileBody(new File(filePath)));
+//        builder.addPart("optionalParam", new StringBody("true", ContentType.create(, Consts.UTF_8)));
+        builder.addBinaryBody("file", new File(filePath));
         request.setEntity(builder.build());
         HttpResponse response = client.execute(request);
         int httpStatus = response.getStatusLine().getStatusCode();

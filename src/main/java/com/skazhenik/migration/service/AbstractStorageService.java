@@ -109,8 +109,8 @@ public abstract class AbstractStorageService {
         }
     }
 
-    public void upload(final File file, final String fileName) throws ServiceException {
-        executePostRequest(getFileURI(fileName), file);
+    public void upload(final File file) throws ServiceException {
+        executePostRequest(getDefaultURI(), file);
     }
 
     public void download(final Path tempDir, final String fileName) throws ServiceException {
