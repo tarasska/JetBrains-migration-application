@@ -11,6 +11,7 @@ import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.http.entity.mime.content.FileBody;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.json.JSONArray;
 
 import java.io.*;
@@ -22,10 +23,14 @@ import java.util.List;
 public abstract class AbstractStorageService {
     protected static final String localhost = "http://localhost:8080";
 
+    private final int MAX_CONNECTION = 100;
+    private final PoolingHttpClientConnectionManager httpClientConnectionManager;
     private final CloseableHttpClient client;
 
     public AbstractStorageService() {
-        client = HttpClients.createDefault();
+        httpClientConnectionManager = new PoolingHttpClientConnectionManager();
+        httpClientConnectionManager.setMaxTotal(MAX_CONNECTION);
+        client = HttpClients.custom().setConnectionManager(httpClientConnectionManager).build();
     }
 
 
@@ -113,7 +118,7 @@ public abstract class AbstractStorageService {
     public void download(final Path tempDir, final String fileName) throws ServiceException {
         Path file = tempDir.resolve(fileName);
         try (InputStream inputStream = executeGetRequest(getFileURI(fileName))) {
-            try (BufferedWriter writer = Files.newBufferedWriter(file)) {
+            try (OutputStream writer = Files.newOutputStream(file)) {
                 int data;
                 while ((data = inputStream.read()) != -1) {
                     writer.write(data);
