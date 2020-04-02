@@ -1,2 +1,3 @@
 # Project exclude paths
 /target/
+/src/main/java/com/skazhenik/migration/loader/ParallelLoader2.java

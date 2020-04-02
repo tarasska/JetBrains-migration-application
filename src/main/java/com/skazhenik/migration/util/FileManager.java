@@ -62,4 +62,27 @@ public class FileManager {
             }
         });
     }
+
+    /**
+     * Delete the file corresponding to the {@code path}.
+     *
+     * @param path file path
+     * @throws IOException if file deletion fails
+     */
+    public static void deleteFile(final Path path) throws IOException {
+        Files.delete(path);
+    }
+
+    /**
+     * Delete the file corresponding to the {@code path}.
+     * Does not throw {@link IOException} if deletion failed.
+     *
+     * @param path file path
+     */
+    public static void deleteFileIfPossible(final Path path) {
+        try {
+            Files.delete(path);
+        } catch (IOException ignored) {
+        }
+    }
 }
