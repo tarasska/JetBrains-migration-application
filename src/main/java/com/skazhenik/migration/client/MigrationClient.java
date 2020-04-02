@@ -26,7 +26,9 @@ public class MigrationClient {
         List<String> oldFiles = getFilesList(oldStorageService);
         try (ParallelMigrationManager parallelMigrationManager = new ParallelMigrationManager(MAX_THREAD_COUNT,
                 tempDir, oldStorageService, newStorageService)) {
+            System.out.println("Transfer files...");
             parallelMigrationManager.load(oldFiles, MAX_LOAD_FACTOR);
+            System.out.println("Delete old files...");
             parallelMigrationManager.delete(oldStorageService, oldFiles);
         } catch (ExecutionException e) {
             throw new MigrationException(e);
@@ -42,7 +44,9 @@ public class MigrationClient {
             return;
         }
         try {
+            System.out.println("Start migration...");
             migrate(tempDir);
+            System.out.println("Migration completed successfully");
         } catch (MigrationException e) {
             System.err.println("Migration failed with msg: " + e.getMessage());
         } finally {

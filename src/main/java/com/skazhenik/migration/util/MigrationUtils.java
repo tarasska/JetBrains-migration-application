@@ -17,7 +17,6 @@ public class MigrationUtils {
             try {
                 return service.getFilesList();
             } catch (ServiceException e) {
-                System.err.println("Log `getFilesList` failed: " + e.getMessage());
                 remainingAttempts--;
             }
         }
@@ -33,7 +32,6 @@ public class MigrationUtils {
                 service.download(tempDir, fileName);
                 return;
             } catch (ServiceException e) {
-                System.err.println("Log `download` (file: " + fileName + ") failed: " + e.getMessage());
                 remainingAttempts--;
             }
         }
@@ -49,7 +47,6 @@ public class MigrationUtils {
                 service.upload(file);
                 return;
             } catch (ServiceException e) {
-                System.err.println("Log `upload` (file: " + fileName + ") failed: " + e.getMessage());
                 remainingAttempts--;
             }
         }
@@ -64,7 +61,6 @@ public class MigrationUtils {
                 service.delete(fileName);
                 return;
             } catch (ServiceException e) {
-                System.err.println("Log `delete` (file: " + fileName + ") failed: " + e.getMessage());
                 remainingAttempts--;
             }
         }
