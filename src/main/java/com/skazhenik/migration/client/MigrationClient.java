@@ -1,7 +1,7 @@
 package com.skazhenik.migration.client;
 
 import com.skazhenik.migration.exception.MigrationException;
-import com.skazhenik.migration.loader.ParallelLoader;
+import com.skazhenik.migration.loader.ParallelMigrationManager;
 import com.skazhenik.migration.service.NewStorageService;
 import com.skazhenik.migration.service.OldStorageService;
 
@@ -10,25 +10,27 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
-import static com.skazhenik.migration.util.FileManager.createTempDir;
-import static com.skazhenik.migration.util.FileManager.deleteTempDir;
-import static com.skazhenik.migration.util.MigrationManager.*;
+import static com.skazhenik.migration.util.FileUtils.createTempDir;
+import static com.skazhenik.migration.util.FileUtils.deleteTempDir;
+import static com.skazhenik.migration.util.MigrationUtils.getFilesList;
 
 public class MigrationClient {
     private static final Path temporaryDirLocation = Path.of("..");
-    private static final int MAX_LOCAL_FILE_COUNT = 100;
+    private static final int MAX_THREAD_COUNT = 10;
+    // fixes the stored number of files, does not allow to expand the local storage indefinitely
+    private static final int MAX_LOAD_FACTOR = 50;
     private final OldStorageService oldStorageService = new OldStorageService();
     private final NewStorageService newStorageService = new NewStorageService();
 
     private void migrate(final Path tempDir) throws MigrationException {
         List<String> oldFiles = getFilesList(oldStorageService);
-        try (ParallelLoader parallelLoader = new ParallelLoader(MAX_LOCAL_FILE_COUNT,
-                tempDir, oldStorageService, newStorageService);) {
-            parallelLoader.load(oldFiles);
+        try (ParallelMigrationManager parallelMigrationManager = new ParallelMigrationManager(MAX_THREAD_COUNT,
+                tempDir, oldStorageService, newStorageService)) {
+            parallelMigrationManager.load(oldFiles, MAX_LOAD_FACTOR);
+            parallelMigrationManager.delete(oldStorageService, oldFiles);
         } catch (ExecutionException e) {
-            throw new MigrationException("Loading files failed", e);
+            throw new MigrationException(e);
         }
-        System.err.println("migrate");
     }
 
     private void run() {

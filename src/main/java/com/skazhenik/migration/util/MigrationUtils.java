@@ -8,7 +8,7 @@ import java.io.File;
 import java.nio.file.Path;
 import java.util.List;
 
-public class MigrationManager {
+public class MigrationUtils {
     private static final int UnsuccessfulRequestCount = 100;
 
     public static List<String> getFilesList(final AbstractStorageService service) throws MigrationException {
