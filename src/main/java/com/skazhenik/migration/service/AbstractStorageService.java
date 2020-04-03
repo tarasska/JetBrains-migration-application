@@ -3,6 +3,7 @@ package com.skazhenik.migration.service;
 import com.skazhenik.migration.exception.ServiceException;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
+import org.apache.http.HttpStatus;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
@@ -39,7 +40,7 @@ public abstract class AbstractStorageService {
 
     private boolean isResponseSuccessful(final HttpResponse response) {
         // setting point
-        return getResponseCode(response) == 200;
+        return getResponseCode(response) == HttpStatus.SC_OK;
     }
 
     private void checkResponse(final HttpResponse response) throws ServiceException {

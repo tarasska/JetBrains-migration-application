@@ -3,6 +3,7 @@ package com.skazhenik.migration.util;
 import com.skazhenik.migration.exception.MigrationException;
 import com.skazhenik.migration.exception.ServiceException;
 import com.skazhenik.migration.service.AbstractStorageService;
+import org.apache.http.HttpStatus;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -10,10 +11,6 @@ import java.util.List;
 
 public class MigrationUtils {
     private static final int UnsuccessfulRequestCount = 100;
-
-    private static final int NOT_FOUND = 404;
-    private static final int CONFLICT = 409;
-
 
     public static List<String> getFilesList(final AbstractStorageService service) throws MigrationException {
         int remainingAttempts = UnsuccessfulRequestCount;
@@ -51,7 +48,7 @@ public class MigrationUtils {
                 service.upload(file);
                 return;
             } catch (ServiceException e) {
-                if (e.getResponseCode() == CONFLICT) {
+                if (e.getResponseCode() == HttpStatus.SC_CONFLICT) {
                     try {
                         deleteFile(service, fileName);
                     } catch (MigrationException eDelete) {
@@ -74,7 +71,7 @@ public class MigrationUtils {
                 service.delete(fileName);
                 return;
             } catch (ServiceException e) {
-                if (e.getResponseCode() == NOT_FOUND) {
+                if (e.getResponseCode() == HttpStatus.SC_NOT_FOUND) {
                     return;
                 } else {
                     remainingAttempts--;
