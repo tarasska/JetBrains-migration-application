@@ -1,5 +1,8 @@
 package com.skazhenik.migration.exception;
 
+/**
+ * Exception used for convenient error handling during migration.
+ */
 public class MigrationException extends Exception {
     public MigrationException() {
     }

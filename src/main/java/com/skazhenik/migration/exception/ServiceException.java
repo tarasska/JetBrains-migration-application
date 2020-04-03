@@ -1,5 +1,9 @@
 package com.skazhenik.migration.exception;
 
+/**
+ * Exception used for convenient error handling during server interaction.
+ * It contains a return code for all failed requests that threw exceptions.
+ */
 public class ServiceException extends Exception {
     private int responseCode = 0;
 
