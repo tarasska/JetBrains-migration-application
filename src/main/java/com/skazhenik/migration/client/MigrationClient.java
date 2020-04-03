@@ -14,6 +14,11 @@ import static com.skazhenik.migration.util.FileUtils.createTempDir;
 import static com.skazhenik.migration.util.FileUtils.deleteTempDir;
 import static com.skazhenik.migration.util.MigrationUtils.getFilesList;
 
+/**
+ * @author Skazhenik Taras
+ * <p>
+ * The main class that migrates data from the old storage to the new one.
+ */
 public class MigrationClient {
     private static final Path temporaryDirLocation = Path.of("..");
     private static final int MAX_THREAD_COUNT = 10;
@@ -22,6 +27,15 @@ public class MigrationClient {
     private final OldStorageService oldStorageService = new OldStorageService();
     private final NewStorageService newStorageService = new NewStorageService();
 
+    /**
+     * Provides a complete migration cycle.
+     * Download a list of old storage files. Creates a {@link ParallelMigrationManager} which transfers
+     * files between storages using a locally fixed buffer for files in a temporary directory.
+     * Deletes all files in the old storage if the migration is successful.
+     *
+     * @param tempDir directory for storing temporary data
+     * @throws MigrationException if an error occurs during migration
+     */
     private void migrate(final Path tempDir) throws MigrationException {
         List<String> oldFiles = getFilesList(oldStorageService);
         try (ParallelMigrationManager parallelMigrationManager = new ParallelMigrationManager(MAX_THREAD_COUNT,
@@ -35,6 +49,10 @@ public class MigrationClient {
         }
     }
 
+    /**
+     * Creates a temporary directory and starts migration.
+     * Cleans all temporary directory in finally block.
+     */
     private void run() {
         Path tempDir;
         try {
@@ -58,8 +76,12 @@ public class MigrationClient {
         }
     }
 
+    /**
+     * Run migration.
+     *
+     * @param args command line options not expected
+     */
     public static void main(String[] args) {
         new MigrationClient().run();
     }
-
 }
