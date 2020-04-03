@@ -11,6 +11,10 @@ import java.util.List;
 public class MigrationUtils {
     private static final int UnsuccessfulRequestCount = 100;
 
+    private static final int NOT_FOUND = 404;
+    private static final int CONFLICT = 409;
+
+
     public static List<String> getFilesList(final AbstractStorageService service) throws MigrationException {
         int remainingAttempts = UnsuccessfulRequestCount;
         while (remainingAttempts > 0) {
@@ -47,7 +51,16 @@ public class MigrationUtils {
                 service.upload(file);
                 return;
             } catch (ServiceException e) {
-                remainingAttempts--;
+                if (e.getResponseCode() == CONFLICT) {
+                    try {
+                        deleteFile(service, fileName);
+                    } catch (MigrationException eDelete) {
+                        e.addSuppressed(eDelete);
+                        throw new MigrationException("Unable to upload file ", e);
+                    }
+                } else {
+                    remainingAttempts--;
+                }
             }
         }
         throw new MigrationException("Waiting too long for the correct response to the file upload request");
@@ -61,7 +74,11 @@ public class MigrationUtils {
                 service.delete(fileName);
                 return;
             } catch (ServiceException e) {
-                remainingAttempts--;
+                if (e.getResponseCode() == NOT_FOUND) {
+                    return;
+                } else {
+                    remainingAttempts--;
+                }
             }
         }
         throw new MigrationException("Waiting too long for the correct response to the file upload request");

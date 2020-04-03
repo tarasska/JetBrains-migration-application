@@ -33,15 +33,22 @@ public abstract class AbstractStorageService {
         client = HttpClients.custom().setConnectionManager(httpClientConnectionManager).build();
     }
 
+    private int getResponseCode(final HttpResponse response) {
+        return response.getStatusLine().getStatusCode();
+    }
 
     private boolean isResponseSuccessful(final HttpResponse response) {
         // setting point
-        return response.getStatusLine().getStatusCode() == 200;
+        return getResponseCode(response) == 200;
     }
 
     private void checkResponse(final HttpResponse response) throws ServiceException {
         if (!isResponseSuccessful(response)) {
-            throw new ServiceException("Bad response with code: " + response.getStatusLine().getStatusCode());
+            final int responseCode = getResponseCode(response);
+            throw new ServiceException(
+                    "Bad response with code: " + responseCode,
+                    responseCode
+            );
         }
     }
 
@@ -53,8 +60,12 @@ public abstract class AbstractStorageService {
             if (isResponseSuccessful(response)) {
                 return entity.getContent();
             } else {
+                final int responseCode = getResponseCode(response);
                 entity.getContent().close();
-                throw new ServiceException("Bad response with code: " + response.getStatusLine().getStatusCode());
+                throw new ServiceException(
+                        "Bad response with code: " + responseCode,
+                        responseCode
+                );
             }
         } catch (IOException e) {
             throw new ServiceException("IOException occurred during the execution of the GET request", e);
