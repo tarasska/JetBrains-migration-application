@@ -1,129 +1,114 @@
 package com.skazhenik.migration;
 
-import com.skazhenik.migration.exception.MigrationException;
+import com.skazhenik.migration.exception.ServiceException;
+import com.skazhenik.migration.service.AbstractStorageService;
 import com.skazhenik.migration.service.NewStorageService;
 import com.skazhenik.migration.service.OldStorageService;
-import com.skazhenik.migration.util.MigrationUtils;
-import org.apache.commons.io.FileUtils;
+import org.apache.http.HttpStatus;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.Date;
+import java.util.List;
+import java.util.Objects;
 
-public class StorageServiceTest {
-    private final Path tempLocation = Path.of("..");
-    private final Random random = new Random();
-    private final int ALPHABET_SIZE = 255;
-    private final int SMALL_TEST_SIZE = 100;
+public class StorageServiceTest extends BaseTest {
 
-
-    private void generateRandomFile(final Path file, final int size) {
-        try (BufferedWriter writer = Files.newBufferedWriter(file)) {
-            for (int i = 0; i < size; i++) {
-                writer.write(random.nextInt(ALPHABET_SIZE));
-            }
-        } catch (IOException e) {
-            System.err.println("Unable to create random file:" + e.getMessage());
-        }
-    }
-
-    private Path createDir() {
-        try {
-            return Files.createTempDirectory(tempLocation, "temp");
-        } catch (IOException e) {
-            return null;
-        }
-    }
-
-    @Test
-    public void loadNewStorageTest() {
-        Path tempDir1 = createDir();
-        Path tempDir2 = createDir();
-        Objects.requireNonNull(tempDir1);
-        Objects.requireNonNull(tempDir2);
-
-        NewStorageService newStorageService = new NewStorageService();
-        for (int i = 1; i < SMALL_TEST_SIZE; i++) {
-            final String name = "loadNewStorageTestFile" + i + ".txt";
-            final Path file = tempDir1.resolve(name);
-            generateRandomFile(file, i);
-            try {
-                MigrationUtils.uploadFile(newStorageService, new File(file.toString()), name);
-            } catch (MigrationException e) {
-                Assert.fail("Uploading failed " + e.getMessage());
-            }
-            try {
-                MigrationUtils.downloadFile(newStorageService, tempDir2, name);
-            } catch (MigrationException e) {
-                Assert.fail("Downloading failed " + e.getMessage());
-            }
-            try {
-                Assert.assertEquals(
-                        FileUtils.readFileToString(new File(file.toString()), StandardCharsets.UTF_8),
-                        FileUtils.readFileToString(new File(tempDir2.resolve(name).toString()), StandardCharsets.UTF_8)
-                );
-            } catch (IOException e) {
-                Assert.fail("Files comparing failed " + e.getMessage());
-            }
-        }
-    }
-
-    @Test
-    public void getFilesUploadNewStorageTest() {
+    private void uploadTest(final AbstractStorageService storageService) {
         Path tempDir = createDir();
         Objects.requireNonNull(tempDir);
 
-        Set<String> names = new HashSet<>();
-        NewStorageService newStorageService = new NewStorageService();
-        for (int i = 1; i < SMALL_TEST_SIZE; i++) {
-            final String name = "getFilesUploadNewStorageTestFile" + i + ".txt";
-            final Path file = tempDir.resolve(name);
-            generateRandomFile(file, i);
-            names.add(name);
+        File file = new File("Alea jacta est + " + new Date().getTime() + ".txt");
+        generateRandomFile(file.toPath(), 100);
+        int attempts = 100;
+        while (attempts > 0) {
             try {
-                MigrationUtils.uploadFile(newStorageService, new File(file.toString()), name);
-            } catch (MigrationException ignored) {
+                storageService.upload(file);
+                break;
+            } catch (ServiceException e) {
+                if (e.getResponseCode() != HttpStatus.SC_INTERNAL_SERVER_ERROR) {
+                    Assert.fail("Unexpected error: " + e.getMessage());
+                    break;
+                }
             }
+            attempts--;
+        }
+        Assert.assertTrue(attempts != 0);
+        attempts = 100;
+        while (attempts > 0) {
+            try {
+                storageService.upload(file);
+                Assert.fail("Error expected");
+            } catch (ServiceException e) {
+                if (e.getResponseCode() != HttpStatus.SC_INTERNAL_SERVER_ERROR) {
+                    break;
+                }
+            }
+            attempts--;
         }
 
-        try {
-            Assert.assertEquals(names, new HashSet<>(MigrationUtils.getFilesList(newStorageService)));
-        } catch (MigrationException e) {
-            Assert.fail("getFilesList failed " + e.getMessage());
+        deleteDir(tempDir);
+    }
+
+    private List<String> getFiles(final AbstractStorageService service) {
+        int attempts = 100;
+        List<String> names = null;
+        while (attempts > 0) {
+            try {
+                names = service.getFilesList();
+                break;
+            } catch (ServiceException e) {
+                if (e.getResponseCode() != HttpStatus.SC_INTERNAL_SERVER_ERROR) {
+                    Assert.fail("Unexpected error" + e);
+                }
+            }
+            attempts--;
         }
+        return names;
+    }
+
+
+    private void deleteTest(final AbstractStorageService service) {
+        List<String> names = getFiles(service);
+
+        Assert.assertNotNull(names);
+        Assert.assertFalse(names.isEmpty());
+
+        int attempts = 100;
+        while (attempts > 0) {
+            try {
+                service.delete(names.get(0));
+                break;
+            } catch (ServiceException e) {
+                if (e.getResponseCode() != HttpStatus.SC_INTERNAL_SERVER_ERROR) {
+                    Assert.fail("Unexpected error" + e);
+                }
+            }
+            attempts--;
+        }
+        List<String> newNames = getFiles(service);
+        Assert.assertNotNull(names);
+        Assert.assertFalse(newNames.contains(names.get(0)));
+    }
+
+
+    @Test
+    public void newStorageUploadTest() {
+        uploadTest(new NewStorageService());
+    }
+
+
+    @Test
+    public void deleteOldStorageTest() {
+        deleteTest(new OldStorageService());
     }
 
     @Test
-    public void getFilesDeleteOldStorageTest() {
-        OldStorageService oldStorageService = new OldStorageService();
-        Set<String> oldStorageNames = new HashSet<>();
-        try {
-            oldStorageNames.addAll(MigrationUtils.getFilesList(oldStorageService));
-        } catch (MigrationException e) {
-            Assert.fail("getFilesList from old storage failed " + e.getMessage());
-        }
-        int i = 0;
-        for (Iterator<String> it = oldStorageNames.iterator(); it.hasNext(); ) {
-            try {
-                MigrationUtils.deleteFile(oldStorageService, it.next());
-                it.remove();
-            } catch (MigrationException ignored) {
-            }
-            if (i++ > SMALL_TEST_SIZE) {
-                break;
-            }
-        }
-
-        try {
-            Assert.assertEquals(oldStorageNames, new HashSet<>(MigrationUtils.getFilesList(oldStorageService)));
-        } catch (MigrationException e) {
-            Assert.fail("getFilesList failed " + e.getMessage());
-        }
+    public void deleteNewStorageTest() {
+        NewStorageService service = new NewStorageService();
+        uploadTest(service);
+        deleteTest(service);
     }
 }
