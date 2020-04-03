@@ -36,8 +36,7 @@ public class ParallelMigrationManager implements AutoCloseable {
      * @param tempDir           directory for storing temporary data
      * @param oldStorageService service for old storage
      * @param newStorageService service for new storage
-     *                          
-     * @see java.util.concurrent.Executors#newFixedThreadPool(int) 
+     * @see java.util.concurrent.Executors#newFixedThreadPool(int)
      */
     public ParallelMigrationManager(final int threads,
                                     final Path tempDir,
@@ -77,7 +76,7 @@ public class ParallelMigrationManager implements AutoCloseable {
     /**
      * Performs parallel migration.
      *
-     * @param files      {@link List} of file's names
+     * @param files      {@link List} of files names
      * @param loadFactor parameter providing a fixed size of the directory with local files
      * @throws ExecutionException if one of the tasks ended with an exception
      */
@@ -105,7 +104,7 @@ public class ParallelMigrationManager implements AutoCloseable {
      * Delete all files from storage using {@code service}.
      *
      * @param service service for interacting with storage
-     * @param files   {@link List} of file's names to delete
+     * @param files   {@link List} of files names to delete
      * @throws ExecutionException if one of the tasks ended with an exception
      */
     public void delete(final AbstractStorageService service, final List<String> files) throws ExecutionException {

@@ -28,21 +28,36 @@ public abstract class AbstractStorageService {
     private final PoolingHttpClientConnectionManager httpClientConnectionManager;
     private final CloseableHttpClient client;
 
+    /**
+     * Creates {@link org.apache.http.client.HttpClient} with {@link #MAX_CONNECTION} connections.
+     */
     public AbstractStorageService() {
         httpClientConnectionManager = new PoolingHttpClientConnectionManager();
         httpClientConnectionManager.setMaxTotal(MAX_CONNECTION);
         client = HttpClients.custom().setConnectionManager(httpClientConnectionManager).build();
     }
 
+    /**
+     * @param response {@link HttpResponse} response
+     * @return int value represents response code
+     */
     private int getResponseCode(final HttpResponse response) {
         return response.getStatusLine().getStatusCode();
     }
 
+    /**
+     * @param response {@link HttpResponse} response
+     * @return {@link Boolean#TRUE} if response code equals to {@link HttpStatus#SC_OK}
+     */
     private boolean isResponseSuccessful(final HttpResponse response) {
         // setting point
         return getResponseCode(response) == HttpStatus.SC_OK;
     }
 
+    /**
+     * @param response {@link HttpResponse} response
+     * @throws ServiceException if {@link #isResponseSuccessful(HttpResponse)} return {@link Boolean#FALSE}
+     */
     private void checkResponse(final HttpResponse response) throws ServiceException {
         if (!isResponseSuccessful(response)) {
             final int responseCode = getResponseCode(response);
@@ -53,6 +68,13 @@ public abstract class AbstractStorageService {
         }
     }
 
+    /**
+     * Execute GET HTTP request.
+     *
+     * @param uri {@link String} representation of URI
+     * @return {@link InputStream} with response content
+     * @throws ServiceException if the request failed
+     */
     private InputStream executeGetRequest(final String uri) throws ServiceException {
         HttpGet request = new HttpGet(uri);
         try {
@@ -73,6 +95,13 @@ public abstract class AbstractStorageService {
         }
     }
 
+    /**
+     * Execute (file) POST HTTP request.
+     *
+     * @param uri  {@link String} representation of URI
+     * @param file file to post
+     * @throws ServiceException if the request failed
+     */
     private void executePostRequest(final String uri, final File file) throws ServiceException {
         HttpPost request = new HttpPost(uri);
         request.setHeader("Accept", "*/*");
@@ -84,6 +113,12 @@ public abstract class AbstractStorageService {
         }
     }
 
+    /**
+     * Execute DELETE HTTP request.
+     *
+     * @param uri {@link String} representation of URI
+     * @throws ServiceException if the request failed
+     */
     private void executeDeleteRequest(final String uri) throws ServiceException {
         HttpDelete request = new HttpDelete(uri);
         request.setHeader("Accept", "*/*");
@@ -94,12 +129,28 @@ public abstract class AbstractStorageService {
         }
     }
 
+    /**
+     * Construct file's URI from default URI and file's name.
+     *
+     * @param fileName file name
+     * @return {@link String} containing file's URI.
+     */
     private String getFileURI(final String fileName) {
         return getDefaultURI().concat("/").concat(fileName);
     }
 
+    /**
+     * @return {@link String} containing default storage URI
+     */
     abstract String getDefaultURI();
 
+    /**
+     * Construct a {@link List} from {@link InputStream} received from GET request
+     *
+     * @return {@link List} of files names from storage
+     * @throws ServiceException if the request or it's processing failed
+     * @see #executeGetRequest(String)
+     */
     public List<String> getFilesList() throws ServiceException {
         try (BufferedReader bufferedReader =
                      new BufferedReader(new InputStreamReader(executeGetRequest(getDefaultURI())))) {
@@ -123,10 +174,25 @@ public abstract class AbstractStorageService {
         }
     }
 
+    /**
+     * Upload {@code file} to the storage.
+     *
+     * @param file file to upload
+     * @throws ServiceException if upload failed
+     * @see #executePostRequest(String, File)
+     */
     public void upload(final File file) throws ServiceException {
         executePostRequest(getDefaultURI(), file);
     }
 
+    /**
+     * Download file with {@code fileName} to {@code tempDir} from storage.
+     *
+     * @param tempDir  directory for storing temporary data
+     * @param fileName file's name to download
+     * @throws ServiceException if download failed
+     * @see #executeGetRequest(String)
+     */
     public void download(final Path tempDir, final String fileName) throws ServiceException {
         Path file = tempDir.resolve(fileName);
         try (InputStream inputStream = executeGetRequest(getFileURI(fileName))) {
@@ -146,6 +212,13 @@ public abstract class AbstractStorageService {
 
     }
 
+    /**
+     * Delete file with {@code fileName} from storage.
+     *
+     * @param fileName file's name to delete
+     * @throws ServiceException if deletion failed
+     * @see #executeDeleteRequest(String)
+     */
     public void delete(final String fileName) throws ServiceException {
         executeDeleteRequest(getFileURI(fileName));
     }
